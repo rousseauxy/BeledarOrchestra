@@ -164,10 +164,8 @@ frame:SetScript("OnEvent", function(_, event, ...)
         end
 
     elseif event == "UNIT_AURA" then
-        local unit = ...
-        if unit == "target" then
-            ns.ValidateTarget()
-        end
+        -- Filtered to "target" at registration, so no unit check is needed here.
+        ns.ValidateTarget()
 
     elseif event == "PLAYER_STARTED_MOVING" then
         local slot = ns.GetRaidSlotForPlayer()
@@ -241,7 +239,13 @@ frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("CHAT_MSG_ADDON")
 frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 frame:RegisterEvent("PLAYER_TARGET_CHANGED")
-frame:RegisterEvent("UNIT_AURA")
+-- Registered as a unit event: the emote stacks this addon reads live on the
+-- Divine Flame, i.e. the "target" unit. RegisterUnitEvent filters in C before
+-- dispatch, where plain RegisterEvent delivered every aura application,
+-- refresh, stack change and expiry on every party, raid, boss and nameplate
+-- unit -- thousands of dispatches per encounter in a 20-man raid, all of them
+-- discarded by the unit check in the handler.
+frame:RegisterUnitEvent("UNIT_AURA", "target")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("ZONE_CHANGED")
 frame:RegisterEvent("ZONE_CHANGED_INDOORS")
