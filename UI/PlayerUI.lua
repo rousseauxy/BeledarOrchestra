@@ -5,6 +5,9 @@ local state = ns.state
 local EMOTES = ns.EMOTES
 local Print = ns.Print
 
+-- Height of the player panel's title strip.
+local BO_HEADER_H = 24
+
 function ns.UpdatePlayerPanel()
     if not ui.playerFrame then return end
 
@@ -184,7 +187,7 @@ function ns.PressBow()
 end
 
 function ns.CreatePlayerUI()
-    local playerFrame = ns.CreateBackdropFrame("BeledarOrchestraPlayerFrame", UIParent, 260, 155)
+    local playerFrame = ns.CreateBackdropFrame("BeledarOrchestraPlayerFrame", UIParent, 260, 140)
     playerFrame:SetPoint("CENTER", UIParent, "CENTER", 360, -120)
     playerFrame:SetFrameStrata("MEDIUM")
     playerFrame:SetClampedToScreen(true)
@@ -193,44 +196,80 @@ function ns.CreatePlayerUI()
     ns.MakeMovable(playerFrame)
     ui.playerFrame = playerFrame
 
-    local title = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOP", 0, -14)
+    -- ---- Header ----
+    -- The title used to be anchored TOP while the version was anchored TOPLEFT,
+    -- so the two overlapped: the title is wide enough to reach the left edge at
+    -- this frame width. Both now live in a header strip that reserves its own
+    -- space, title on the left and version on the right.
+    local headerBg = playerFrame:CreateTexture(nil, "ARTWORK")
+    headerBg:SetPoint("TOPLEFT", 4, -4)
+    headerBg:SetPoint("TOPRIGHT", -4, -4)
+    headerBg:SetHeight(BO_HEADER_H)
+    headerBg:SetColorTexture(0.16, 0.14, 0.10, 0.85)
+    ui.playerHeaderBg = headerBg
+
+    local headerLine = playerFrame:CreateTexture(nil, "OVERLAY")
+    headerLine:SetPoint("TOPLEFT", headerBg, "BOTTOMLEFT", 0, 0)
+    headerLine:SetPoint("TOPRIGHT", headerBg, "BOTTOMRIGHT", 0, 0)
+    headerLine:SetHeight(1)
+    headerLine:SetColorTexture(0.35, 0.30, 0.20, 1)
+    ui.playerHeaderLine = headerLine
+
+    local title = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    title:SetPoint("LEFT", headerBg, "LEFT", 8, 0)
     title:SetText("Beledar Assignment")
+    title:SetTextColor(1, 0.82, 0)
 
-    local versionText = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    versionText:SetPoint("TOPLEFT", playerFrame, "TOPLEFT", 8, -10)
-    versionText:SetText("v" .. (C_AddOns.GetAddOnMetadata("BeledarOrchestra", "Version") or "?"))
-
-    local measureText = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    measureText:SetPoint("TOP", title, "BOTTOM", 0, -10)
-    measureText:SetText("Waiting for measure")
-    ui.playerMeasureText = measureText
-
-    local slotText = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    slotText:SetPoint("TOP", measureText, "BOTTOM", 0, -8)
-    slotText:SetText("No raid slot")
-    ui.playerSlotText = slotText
-
-    local modifiedText = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    modifiedText:SetPoint("TOP", slotText, "BOTTOM", 0, -2)
-    modifiedText:SetText("|cffffff00(Modified by leader)|r")
-    modifiedText:Hide()
-    ui.playerModifiedText = modifiedText
-
-    local button = CreateFrame("Button", nil, playerFrame, "UIPanelButtonTemplate")
-    button:SetSize(180, 44)
-    button:SetPoint("BOTTOM", 0, 14)
-    button:SetScript("OnClick", ns.PressPlayerEmote)
-    button:SetText("No measure")
-    button:Show()
-    ui.playerButton = button
-
-    local closeButton = CreateFrame("Button", nil, playerFrame, "UIPanelCloseButton")
-    closeButton:SetPoint("TOPRIGHT", 0, 0)
+    -- Flat close button. UIPanelCloseButton is 32px and was pinned to the
+    -- frame's TOPRIGHT, so it hung off the corner over the 16px border.
+    local closeButton = CreateFrame("Button", nil, playerFrame)
+    closeButton:SetSize(18, 18)
+    closeButton:SetPoint("RIGHT", headerBg, "RIGHT", -4, 0)
+    local closeLabel = closeButton:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    closeLabel:SetAllPoints()
+    closeLabel:SetText("×")
+    closeLabel:SetTextColor(0.65, 0.65, 0.65)
+    closeButton:SetScript("OnEnter", function() closeLabel:SetTextColor(1, 0.35, 0.35) end)
+    closeButton:SetScript("OnLeave", function() closeLabel:SetTextColor(0.65, 0.65, 0.65) end)
     closeButton:SetScript("OnClick", function()
         state.playerUIClosed = true
         playerFrame:Hide()
     end)
+
+    local versionText = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    versionText:SetPoint("RIGHT", closeButton, "LEFT", -4, 0)
+    versionText:SetText("v" .. (C_AddOns.GetAddOnMetadata("BeledarOrchestra", "Version") or "?"))
+
+    -- ---- Measure and slot, one row ----
+    local measureText = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    measureText:SetPoint("TOPLEFT", playerFrame, "TOPLEFT", 12, -(BO_HEADER_H + 14))
+    measureText:SetJustifyH("LEFT")
+    measureText:SetText("Waiting for measure")
+    ui.playerMeasureText = measureText
+
+    local slotText = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    slotText:SetPoint("TOPRIGHT", playerFrame, "TOPRIGHT", -12, -(BO_HEADER_H + 15))
+    slotText:SetJustifyH("RIGHT")
+    slotText:SetTextColor(0.65, 0.65, 0.65)
+    slotText:SetText("No raid slot")
+    ui.playerSlotText = slotText
+
+    local modifiedText = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    modifiedText:SetPoint("TOPLEFT", measureText, "BOTTOMLEFT", 0, -4)
+    modifiedText:SetJustifyH("LEFT")
+    modifiedText:SetText("|cffffff00(Modified by leader)|r")
+    modifiedText:Hide()
+    ui.playerModifiedText = modifiedText
+
+    -- ---- Emote button: the only thing the player acts on ----
+    local button = CreateFrame("Button", nil, playerFrame, "UIPanelButtonTemplate")
+    button:SetPoint("BOTTOMLEFT", playerFrame, "BOTTOMLEFT", 12, 12)
+    button:SetPoint("BOTTOMRIGHT", playerFrame, "BOTTOMRIGHT", -12, 12)
+    button:SetHeight(38)
+    button:SetScript("OnClick", ns.PressPlayerEmote)
+    button:SetText("No measure")
+    button:Show()
+    ui.playerButton = button
 
     ns.UpdatePlayerPanel()
 end
