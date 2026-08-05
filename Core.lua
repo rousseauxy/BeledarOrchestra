@@ -96,19 +96,67 @@ function ns.MakeMovable(f)
     end)
 end
 
+-- Every frame CreateBackdropFrame has produced, so a skin change can repaint
+-- them. Bounded: this addon creates two.
+local backdropFrames = {}
+
+-- Paints one frame in the current look.
+--
+-- ns.euiSkin is set only when EllesmereUI is installed, its skinning module is
+-- on, and the user has not disabled third-party skinning for this addon. When
+-- it is absent -- which is the common case -- the original tooltip backdrop is
+-- used unchanged.
+function ns.ApplyBackdrop(f)
+    local S = ns.euiSkin
+    if not S then
+        f:SetBackdrop({
+            bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+            edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+            tile = true,
+            tileSize = 16,
+            edgeSize = 16,
+            insets = { left = 4, right = 4, top = 4, bottom = 4 },
+        })
+        f:SetBackdropColor(0.05, 0.05, 0.05, 0.9)
+        f:SetBackdropBorderColor(0.25, 0.25, 0.25, 1)
+        return
+    end
+
+    f:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+    })
+    local r, g, b, a = S.GetPanelColor()
+    -- These float over the world, so stay readable even when the user's panel
+    -- fill is semi-transparent.
+    f:SetBackdropColor(r, g, b, math.max(a or 1, 0.92))
+    local ar, ag, ab = S.GetAccentColor()
+    f:SetBackdropBorderColor(ar * 0.55, ag * 0.55, ab * 0.55, 1)
+end
+
+function ns.RefreshSkin()
+    for i = 1, #backdropFrames do
+        ns.ApplyBackdrop(backdropFrames[i])
+    end
+
+    -- The player panel's header strip is coloured by hand, so it does not
+    -- follow the backdrop automatically.
+    local S = ns.euiSkin
+    if S and ns.ui.playerHeaderBg then
+        local ar, ag, ab = S.GetAccentColor()
+        ns.ui.playerHeaderBg:SetColorTexture(ar * 0.30, ag * 0.30, ab * 0.30, 0.9)
+        if ns.ui.playerHeaderLine then
+            ns.ui.playerHeaderLine:SetColorTexture(ar * 0.65, ag * 0.65, ab * 0.65, 1)
+        end
+    end
+end
+
 function ns.CreateBackdropFrame(name, parent, width, height)
     local f = CreateFrame("Frame", name, parent, "BackdropTemplate")
     f:SetSize(width, height)
-    f:SetBackdrop({
-        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-        tile = true,
-        tileSize = 16,
-        edgeSize = 16,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 },
-    })
-    f:SetBackdropColor(0.05, 0.05, 0.05, 0.9)
-    f:SetBackdropBorderColor(0.25, 0.25, 0.25, 1)
+    backdropFrames[#backdropFrames + 1] = f
+    ns.ApplyBackdrop(f)
     return f
 end
 

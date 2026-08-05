@@ -3,6 +3,7 @@
 ## Notes: Raid coordination helper for the Hallowfall flame puzzle.
 ## Author: Samsbase
 ## Version: 0.4.30
+## OptionalDeps: EllesmereUI
 ## SavedVariables: BeledarOrchestraDB
 Measures.lua
 Core.lua
@@ -12,3 +13,4 @@ UI\PlayerUI.lua
 UI\LeaderUI.lua
 DataSync.lua
 Init.lua
+Skin.lua
